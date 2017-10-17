@@ -1,0 +1,53 @@
+{
+	"variables": [],
+	"info": {
+		"name": "AzCrud",
+		"_postman_id": "dcd533e0-cdd5-f3c2-a239-34de84b87112",
+		"description": "",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Get a list of records",
+			"request": {
+				"url": "http://localhost:7071/api/crud/SensorLog",
+				"method": "GET",
+				"header": [],
+				"body": {},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Get a single record",
+			"request": {
+				"url": "http://localhost:7071/api/crud/SensorLog/123",
+				"method": "GET",
+				"header": [],
+				"body": {},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Post a single record",
+			"request": {
+				"url": "http://localhost:7071/api/crud/SensorLog",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"SensorId\": 123123, \"AmbientTemperature\": 21.3121234, \"Humidity\": 65.123111}"
+				},
+				"description": ""
+			},
+			"response": []
+		}
+	]
+}
