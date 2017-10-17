@@ -6,20 +6,23 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
+using System.Data.SqlClient;
+using System.Data;
+using System.Configuration;
 
 public static HttpResponseMessage Run(HttpRequestMessage req, string tableName, int? id, TraceWriter log)
 {
-    var sqlCmd = "";
+    var sql = "";
     var method = req.Method.ToString();
 
     switch (method) {
         case "GET":
             log.Info("SELECT");
-            sqlCmd = Processor.Get(tableName, id);
+            sql = Processor.Get(tableName, id);
             break;
         case "POST":
             log.Info("INSERT");
-            sqlCmd = Processor.Add(tableName, req.Content);
+            sql = Processor.Add(tableName, req.Content);
             break;
         // case "PUT":
         // case "PATCH":
@@ -32,13 +35,70 @@ public static HttpResponseMessage Run(HttpRequestMessage req, string tableName, 
             return req.CreateResponse(HttpStatusCode.NotImplemented);
     }
 
+    var connString = ConfigurationManager.ConnectionStrings["db"].ConnectionString;
+    if (method == "GET")
+    {
+        var dt = Processor.ExecuteSqlSelect(connString, sql);
+        if (dt != null) {
+            return req.CreateResponse(HttpStatusCode.OK, dt);
+        } else {
+            return req.CreateResponse(HttpStatusCode.InternalServerError);
+        }
+    }
 
-    log.Info(sqlCmd);
-    
-    return req.CreateResponse(HttpStatusCode.OK, sqlCmd);
+    return Processor.ExecuteSqlCommand(connString, sql) ?
+                req.CreateResponse(HttpStatusCode.OK) :
+                req.CreateResponse(HttpStatusCode.InternalServerError);
 }
 
 public static class Processor {
+
+    static public bool ExecuteSqlCommand(string connString, string sql)
+    {
+        var success = true;
+        try
+        {
+            using (var connection = new SqlConnection(connString))
+            {
+                var cmd = new SqlCommand();
+                cmd.CommandText = sql;
+                cmd.CommandType = CommandType.Text;
+                cmd.Connection = connection;
+                connection.Open();
+                cmd.ExecuteNonQuery();
+            }
+        }
+        catch
+        {
+            success = false;
+        }
+        return success;
+    }
+    static public DataTable ExecuteSqlSelect(string connString, string sql)
+    {
+        var dataTable = new DataTable();
+        try
+        {
+            using (var connection = new SqlConnection(connString))
+            {
+                var cmd = new SqlCommand();
+
+                cmd.CommandText = sql;
+                cmd.CommandType = CommandType.Text;
+                cmd.Connection = connection;
+                connection.Open();
+
+                var reader = cmd.ExecuteReader();
+                dataTable.Load(reader);
+            }
+        }
+        catch
+        {
+            dataTable = null;
+        }
+        return dataTable;
+    }
+
     public static string Get(string tableName, int? id) {
         var sql = $"SELECT * FROM [{tableName}]";
         if (id.HasValue){
