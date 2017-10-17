@@ -5,32 +5,29 @@ using System.Net.Http;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using Newtonsoft.Json.Linq;
+using System.Collections.Generic;
 
 public static HttpResponseMessage Run(HttpRequestMessage req, string tableName, int? id, TraceWriter log)
 {
-    log.Info("C# HTTP trigger function processing a request...");
-
     var sqlCmd = "";
     var method = req.Method.ToString();
 
     switch (method) {
         case "GET":
-            log.Info("GET");
+            log.Info("SELECT");
             sqlCmd = Processor.Get(tableName, id);
             break;
         case "POST":
-            log.Info("POST");
+            log.Info("INSERT");
             sqlCmd = Processor.Add(tableName, req.Content);
             break;
+        // case "PUT":
         // case "PATCH":
-        //     log.Info("POST");
+        //     log.Info("UPDATE");
         //     break;
         // case "DELETE":
         //     log.Info("PSOT");
         //     break;
-        // case "PUT":
-        //     log.Info("PSOT");
-        //     break;   
         default:
             return req.CreateResponse(HttpStatusCode.NotImplemented);
     }
@@ -50,12 +47,20 @@ public static class Processor {
         return sql;
     }
 
-    public static JObject ParseJsonFromContent(HttpContent content){
-        string jsonContent = content.ReadAsStringAsync().Result;
-        if (jsonContent.Length > 0) {
-            return JObject.Parse(jsonContent);
+    public static JArray ParseJsonFromContent(HttpContent content){
+        string contentString = content.ReadAsStringAsync().Result;
+        contentString = JsonTidyAndConvertToArray(contentString);       
+        return JArray.Parse(contentString);
+    }
+
+    static private string JsonTidyAndConvertToArray(string jsonString)
+    {
+        jsonString = jsonString.Trim();
+        if (jsonString.Substring(0, 1) != "[")
+        {
+            jsonString = $"[{jsonString}]";
         }
-        return null;
+        return jsonString;
     }
 
     public static string GetDbPropertyValue(JToken dbValue){
@@ -69,30 +74,39 @@ public static class Processor {
     }
 
     public static string Add(string tableName, HttpContent content) {
-        var json = ParseJsonFromContent(content);
+        var jArray = ParseJsonFromContent(content);
         var sql = "";
 
-        if (json != null){
-            List<string>keyList = GetPropertyKeysForDynamic(json);
-            var sqlKeys = "";
-            var sqlValues = "";
-            keyList.ForEach(key => {
-                if (sqlKeys.Length == 0){
-                    sqlKeys = $"[{key}]";
-                    sqlValues = $"{ GetDbPropertyValue(json[key]) }";
-                } else {
-                    sqlKeys = $"{sqlKeys}, [{key}]";
-                    sqlValues = $"{sqlValues}, { GetDbPropertyValue(json[key]) }";
-                }
-            });
-
-            sql = $"INSERT INTO [{tableName}] ({sqlKeys}) VALUES ({sqlValues})";
+        foreach (var jToken in jArray)
+        {
+            sql += GenerateAddSql(jToken, tableName);
         }
 
         return sql;
     }
 
-    public static List<string> GetPropertyKeysForDynamic(JObject json)
+    static private string GenerateAddSql(JToken jToken, string tableName)
+    {
+        List<string> keyList = GetPropertyKeysForDynamic(jToken);
+        var sqlKeys = "";
+        var sqlValues = "";
+        keyList.ForEach(key => {
+            if (sqlKeys.Length == 0)
+            {
+                sqlKeys = $"[{key}]";
+                sqlValues = $"{ GetDbPropertyValue(jToken[key]) }";
+            }
+            else
+            {
+                sqlKeys = $"{sqlKeys}, [{key}]";
+                sqlValues = $"{sqlValues}, { GetDbPropertyValue(jToken[key]) }";
+            }
+        });
+
+        return $"INSERT INTO [{tableName}] ({sqlKeys}) VALUES ({sqlValues});";
+    }
+
+    public static List<string> GetPropertyKeysForDynamic(JToken json)
     {
         Dictionary<string, object> values = json.ToObject<Dictionary<string, object>>();
         List<string> toReturn = new List<string>();

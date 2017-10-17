@@ -7,7 +7,7 @@
       "type": "httpTrigger",
       "direction": "in",
       "route": "crud/{tableName}/{id:int?}",
-      "methods": [ "GET", "POST", "PATCH", "PUT", "DELETE" ]      
+      "methods": [ "get", "post", "patch", "put", "delete" ]      
     },
     {
       "name": "$return",
