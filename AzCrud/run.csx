@@ -40,7 +40,10 @@ public static HttpResponseMessage Run(HttpRequestMessage req, string tableName, 
     {
         var dt = Processor.ExecuteSqlSelect(connString, sql);
         if (dt != null) {
-            return req.CreateResponse(HttpStatusCode.OK, dt);
+            var json = "";
+            var serializerSettings = new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() };
+            json = JsonConvert.SerializeObject(dt, serializerSettings);
+            return req.CreateResponse(HttpStatusCode.OK, json);
         } else {
             return req.CreateResponse(HttpStatusCode.InternalServerError);
         }
