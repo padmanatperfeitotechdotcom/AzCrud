@@ -1,14 +1,15 @@
 #r "Newtonsoft.Json"
 
-using System.Net;
-using System.Net.Http;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Serialization;
+using Newtonsoft.Json;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Data.SqlClient;
 using System.Data;
-using System.Configuration;
+using System.Net.Http;
+using System.Net;
+using System.Text;
 
 public static HttpResponseMessage Run(HttpRequestMessage req, string tableName, int? id, TraceWriter log)
 {
