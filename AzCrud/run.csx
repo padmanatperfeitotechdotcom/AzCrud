@@ -43,7 +43,9 @@ public static HttpResponseMessage Run(HttpRequestMessage req, string tableName, 
             var json = "";
             var serializerSettings = new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() };
             json = JsonConvert.SerializeObject(dt, serializerSettings);
-            return req.CreateResponse(HttpStatusCode.OK, json);
+            return new HttpResponseMessage(HttpStatusCode.OK){ 
+                Content = new StringContent(json, Encoding.UTF8, "application/json") 
+                };
         } else {
             return req.CreateResponse(HttpStatusCode.InternalServerError);
         }
